@@ -18,6 +18,13 @@ abstract class Tiket {
         $this->hargaDasarTiket = $hargaDasarTiket;
     }
 
+    // Getter methods
+    public function getIdTiket() { return $this->id_tiket; }
+    public function getNamaFilm() { return $this->nama_film; }
+    public function getJadwalTayang() { return $this->jadwal_tayang; }
+    public function getJumlahKursi() { return $this->jumlah_kursi; }
+    public function getHargaDasarTiket() { return $this->hargaDasarTiket; }
+
     // Metode Abstrak (Wajib diisi oleh class anak nanti)
     abstract public function hitungTotalHarga();
     abstract public function tampilkanInfoFasilitas();
