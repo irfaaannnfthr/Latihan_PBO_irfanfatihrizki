@@ -1,30 +1,33 @@
 <?php
+// ============================================================
+// TAHAP 3 – Konfigurasi Koneksi Database
+// File: koneksi/koneksi.php
+// ============================================================
 
-class Koneksi {
-    private $host = "localhost";
-    private $username = "root"; 
-    private $password = ""; // Kosongkan jika pakai XAMPP/Laragon bawaan, isi jika ada password
-    private $database = "db_latihan_pbo_trpl1a_irfan_fatih_rizki";
-    protected $db;
+define('DB_HOST',     'localhost');
+define('DB_USER',     'root');
+define('DB_PASSWORD', '');
+define('DB_NAME',     'db_latihan_pbo_trpl1a_irfan_fatih_rizki');
 
-    public function __construct() {
-        try {
-            // Menghubungkan ke MySQL menggunakan PDO
-            $dsn = "mysql:host={$this->host};dbname={$this->database};charset=utf8mb4";
-            $this->db = new PDO($dsn, $this->username, $this->password);
-            
-            // Set error mode ke Exception agar kalau salah langsung ketahuan
-            $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (PDOException $e) {
-            // Jika koneksi gagal
-            die("Koneksi database gagal: " . $e->getMessage());
+/**
+ * Mengembalikan koneksi MySQLi ke database.
+ * Menggunakan pola Singleton sederhana agar hanya ada satu koneksi aktif.
+ */
+function getConnection(): mysqli
+{
+    static $conn = null;
+
+    if ($conn === null) {
+        $conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+
+        if ($conn->connect_error) {
+            die('<p style="color:red;font-family:sans-serif;">
+                    ❌ Koneksi database gagal: ' . $conn->connect_error . '
+                 </p>');
         }
+
+        $conn->set_charset('utf8mb4');
     }
 
-    // Method untuk mengambil objek koneksi database
-    public function getKoneksi() {
-        return $this->db;
-    }
+    return $conn;
 }
-
-?>
