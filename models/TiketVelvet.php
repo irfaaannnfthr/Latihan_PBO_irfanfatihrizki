@@ -1,25 +1,41 @@
 <?php
-require_once "Tiket.php";
+// ============================================================
+// TAHAP 4 – Inheritance | 
+// File: models/TiketVelvet.php
+// ============================================================
 
-class TiketVelvet extends Tiket {
-    private $bantalSelimutPack;
-    private $layananButler;
+require_once __DIR__ . '/Tiket.php';
 
-    public function __construct($id_tiket, $nama_film, $jadwal_tayang, $jumlah_kursi, $hargaDasarTiket, $bantalSelimutPack, $layananButler) {
+class TiketVelvet extends Tiket
+{
+    private bool $bantalSelimutPack;
+    private bool $layananButler;
+
+    public function __construct(
+        int    $id_tiket,
+        string $nama_film,
+        string $jadwal_tayang,
+        int    $jumlah_kursi,
+        float  $hargaDasarTiket,
+        bool   $bantalSelimutPack = false,
+        bool   $layananButler     = false
+    ) {
         parent::__construct($id_tiket, $nama_film, $jadwal_tayang, $jumlah_kursi, $hargaDasarTiket);
         $this->bantalSelimutPack = $bantalSelimutPack;
-        $this->layananButler = $layananButler;
+        $this->layananButler     = $layananButler;
     }
 
-    // TAHAP 5: Overriding Method
-    public function hitungTotalHarga() {
-        // Sesuai soal: (jumlah_kursi * hargaDasarTiket) * 1.50
-        $totalHargaDasar = $this->jumlah_kursi * $this->hargaDasarTiket;
-        return $totalHargaDasar * 1.50;
+    // TAHAP 5: Override → (jumlah_kursi * hargaDasarTiket) * 1.50
+    public function hitungTotalHarga(): float
+    {
+        return ($this->jumlah_kursi * $this->hargaDasarTiket) * 1.50;
     }
 
-    public function tampilkanInfoFasilitas() {
-        return "Studio VELVET | Fasilitas: {$this->bantalSelimutPack} | Layanan Butler: {$this->layananButler}";
+    public function tampilkanInfoFasilitas(): string
+    {
+        $bantal = $this->bantalSelimutPack ? '✅ Tersedia' : '❌ Tidak';
+        $butler = $this->layananButler     ? '✅ Tersedia' : '❌ Tidak';
+        return "Bantal & Selimut: <strong>{$bantal}</strong> | "
+             . "Layanan Butler: <strong>{$butler}</strong>";
     }
 }
-?>

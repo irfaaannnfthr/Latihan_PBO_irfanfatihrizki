@@ -1,26 +1,40 @@
 <?php
-require_once "Tiket.php";
+// ============================================================
+// TAHAP 4 – Inheritance | 
+// File: models/TiketIMAX.php
+// ============================================================
 
-class TiketIMAX extends Tiket {
-    private $kacamata3D;
-    private $efekGerakFitur;
+require_once __DIR__ . '/Tiket.php';
 
-    public function __construct($id_tiket, $nama_film, $jadwal_tayang, $jumlah_kursi, $hargaDasarTiket, $kacamata3D, $efekGerakFitur) {
+class TiketIMAX extends Tiket
+{
+    private string $kacamata3dId;
+    private bool   $efekGerakFitur;
+
+    public function __construct(
+        int    $id_tiket,
+        string $nama_film,
+        string $jadwal_tayang,
+        int    $jumlah_kursi,
+        float  $hargaDasarTiket,
+        string $kacamata3dId   = '-',
+        bool   $efekGerakFitur = false
+    ) {
         parent::__construct($id_tiket, $nama_film, $jadwal_tayang, $jumlah_kursi, $hargaDasarTiket);
-        $this->kacamata3D = $kacamata3D;
+        $this->kacamata3dId   = $kacamata3dId;
         $this->efekGerakFitur = $efekGerakFitur;
     }
 
-    // TAHAP 5: Overriding Method
-    public function hitungTotalHarga() {
-        // Sesuai soal: (jumlah_kursi * hargaDasarTiket) + 35000
-        $totalHargaDasar = $this->jumlah_kursi * $this->hargaDasarTiket;
-        return $totalHargaDasar + 35000;
+    // TAHAP 5: Override → (jumlah_kursi * hargaDasarTiket) + 35.000
+    public function hitungTotalHarga(): float
+    {
+        return ($this->jumlah_kursi * $this->hargaDasarTiket) + 35000;
     }
 
-    public function tampilkanInfoFasilitas() {
-        $efek = $this->efekGerakFitur ? $this->efekGerakFitur : "Tidak ada";
-        return "Studio IMAX | Kacamata 3D ID: {$this->kacamata3D} | Efek Gerak: {$efek}";
+    public function tampilkanInfoFasilitas(): string
+    {
+        $efek = $this->efekGerakFitur ? '✅ Aktif' : '❌ Tidak';
+        return "ID Kacamata 3D: <strong>{$this->kacamata3dId}</strong> | "
+             . "Efek Gerak (4DX): <strong>{$efek}</strong>";
     }
 }
-?>
