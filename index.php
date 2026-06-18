@@ -3,7 +3,7 @@
 require_once "Koneksi/Koneksi.php";
 require_once "models/TiketRegular.php";
 require_once "models/TiketIMAX.php";
-require_once "models/TiketVelvet.php";
+require_once "models/TiketVelvet.php"
 
 // 2. Membuat objek koneksi dan mengambil data dari database
 $koneksiObj = new Koneksi();

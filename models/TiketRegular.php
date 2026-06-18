@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// TAHAP 4 – Inheritance | 
+// TAHAP 4 – Inheritance | TAHAP 5 – Polymorphism Overriding
 // File: models/TiketRegular.php
 // ============================================================
 
@@ -8,6 +8,7 @@ require_once __DIR__ . '/Tiket.php';
 
 class TiketRegular extends Tiket
 {
+    // Tahap 4: Properti tambahan
     private string $tipeAudio;
     private string $lokasiBaris;
 
@@ -25,7 +26,8 @@ class TiketRegular extends Tiket
         $this->lokasiBaris = $lokasiBaris;
     }
 
-    // TAHAP 5: Override → jumlah_kursi * hargaDasarTiket
+    // Tahap 5: Override hitungTotalHarga()
+    // Rumus: jumlah_kursi * hargaDasarTiket (tarif standar murni)
     public function hitungTotalHarga(): float
     {
         return $this->jumlah_kursi * $this->hargaDasarTiket;
