@@ -1,216 +1,238 @@
 <?php
-// 1. Memanggil file Koneksi dan semua Model
-require_once "Koneksi/Koneksi.php";
-require_once "models/TiketRegular.php";
-require_once "models/TiketIMAX.php";
-require_once "models/TiketVelvet.php"
+// ============================================================
+// TAHAP 6 – View dengan PHP
+// File: index.php
+// ============================================================
 
-// 2. Membuat objek koneksi dan mengambil data dari database
-$koneksiObj = new Koneksi();
-$db = $koneksiObj->getKoneksi();
+require_once __DIR__ . '/Koneksi/koneksi.php';
+require_once __DIR__ . '/models/Tiket.php';
+require_once __DIR__ . '/models/TiketRegular.php';
+require_once __DIR__ . '/models/TiketIMAX.php';
+require_once __DIR__ . '/models/TiketVelvet.php';
 
-// MENYESUAIKAN: Nama tabel di database kamu adalah 'tabel_tiket'
-$query = "SELECT * FROM tabel_tiket"; 
-$stmt = $db->prepare($query);
-$stmt->execute();
-$dataTiket = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$conn = getConnection();
 
-// 3. Menyiapkan array penampung untuk masing-masing studio
-$listRegular = [];
-$listIMAX = [];
-$listVelvet = [];
+// Ambil semua data dari tabel_tiket, dikelompokkan per jenis studio
+$sql    = "SELECT * FROM tabel_tiket ORDER BY jenis_studio, id_tiket";
+$result = $conn->query($sql);
 
-// 4. Looping data dari database dan mengubahnya menjadi Object (Polimorfisme)
-foreach ($dataTiket as $row) {
-    // MENYESUAIKAN: Nama kolom kategori di database kamu adalah 'jenis_studio'
-    $tipe = $row['jenis_studio']; 
+// Kelompokkan objek per studio
+$tiketPerStudio = ['Regular' => [], 'IMAX' => [], 'Velvet' => []];
 
-    if ($tipe == 'Regular') {
-        $listRegular[] = new TiketRegular(
-            $row['id_tiket'], 
-            $row['nama_film'], 
-            $row['jadwal_tayang'], 
-            $row['jumlah_kursi'], 
-            $row['harga_dasar_tiket'], // MENYESUAIKAN: harga_dasar_tiket
-            $row['tipe_audio'], 
-            $row['lokasi_baris']
-        );
-    } elseif ($tipe == 'IMAX') {
-        $listIMAX[] = new TiketIMAX(
-            $row['id_tiket'], 
-            $row['nama_film'], 
-            $row['jadwal_tayang'], 
-            $row['jumlah_kursi'], 
-            $row['harga_dasar_tiket'], // MENYESUAIKAN: harga_dasar_tiket
-            $row['kacamata_3d_id'],     // MENYESUAIKAN: kacamata_3d_id
-            $row['efek_gerak_fitur_bantal_selimut_pack'] // MENYESUAIKAN: nama kolom pack digabung
-        );
-    } elseif ($tipe == 'VELVET' || $tipe == 'Velvet') { 
-        $listVelvet[] = new TiketVelvet(
-            $row['id_tiket'], 
-            $row['nama_film'], 
-            $row['jadwal_tayang'], 
-            $row['jumlah_kursi'], 
-            $row['harga_dasar_tiket'], // MENYESUAIKAN: harga_dasar_tiket
-            $row['efek_gerak_fitur_bantal_selimut_pack'], // MENYESUAIKAN: nama kolom pack digabung
-            $row['layanan_butler']
-        );
+while ($row = $result->fetch_assoc()) {
+    switch ($row['jenis_studio']) {
+        case 'Regular':
+            $tiketPerStudio['Regular'][] = new TiketRegular(
+                (int)   $row['id_tiket'],
+                        $row['nama_film'],
+                        $row['jadwal_tayang'],
+                (int)   $row['jumlah_kursi'],
+                (float) $row['harga_dasar_tiket'],
+                        $row['tipe_audio']   ?? '-',
+                        $row['lokasi_baris'] ?? '-'
+            );
+            break;
+
+        case 'IMAX':
+            $tiketPerStudio['IMAX'][] = new TiketIMAX(
+                (int)   $row['id_tiket'],
+                        $row['nama_film'],
+                        $row['jadwal_tayang'],
+                (int)   $row['jumlah_kursi'],
+                (float) $row['harga_dasar_tiket'],
+                        $row['kacamata_3d_id']    ?? '-',
+                (bool)  $row['efek_gerak_fitur']
+            );
+            break;
+
+        case 'Velvet':
+            $tiketPerStudio['Velvet'][] = new TiketVelvet(
+                (int)   $row['id_tiket'],
+                        $row['nama_film'],
+                        $row['jadwal_tayang'],
+                (int)   $row['jumlah_kursi'],
+                (float) $row['harga_dasar_tiket'],
+                (bool)  $row['bantal_selimut_pack'],
+                (bool)  $row['layanan_butler']
+            );
+            break;
     }
 }
+
+$conn->close();
+
+// Helper format rupiah
+function rupiah(float $angka): string {
+    return 'Rp ' . number_format($angka, 0, ',', '.');
+}
+
+// Konfigurasi warna per studio
+$studioConfig = [
+    'Regular' => ['emoji' => '🎬', 'warna' => '#2563eb', 'bg' => '#eff6ff'],
+    'IMAX'    => ['emoji' => '🎥', 'warna' => '#16a34a', 'bg' => '#f0fdf4'],
+    'Velvet'  => ['emoji' => '👑', 'warna' => '#9333ea', 'bg' => '#faf5ff'],
+];
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar Tiket Bioskop - Polimorfisme</title>
+    <title>Sistem Manajemen Tiket Bioskop</title>
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            color: #343a40;
-            margin: 0;
-            padding: 20px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
         }
-        h1 {
+
+        header {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #fff;
+            padding: 30px;
             text-align: center;
-            color: #212529;
-            margin-bottom: 30px;
         }
-        h2 {
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
-            padding-bottom: 5px;
-            margin-top: 30px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            background-color: #ffffff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-radius: 8px;
+        header h1 { font-size: 1.8rem; }
+        header p  { margin-top: 6px; color: #cbd5e1; font-size: .9rem; }
+
+        main { max-width: 1100px; margin: 32px auto; padding: 0 20px 60px; }
+
+        /* Studio Section */
+        .studio-section {
+            background: #fff;
+            border-radius: 12px;
+            margin-bottom: 32px;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
         }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #e9ecef;
+
+        .studio-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 24px;
+            color: #fff;
         }
-        th {
-            background-color: #0d6efd;
-            color: white;
+        .studio-header h2  { font-size: 1.2rem; }
+        .studio-header .badge {
+            margin-left: auto;
+            background: rgba(255,255,255,.25);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: .8rem;
             font-weight: 600;
         }
-        tr:hover {
-            background-color: #f1f3f5;
+
+        /* Table */
+        .tbl-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+
+        thead th {
+            background: #f8fafc;
+            padding: 12px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+            white-space: nowrap;
         }
-        .fasilitas {
-            font-style: italic;
-            color: #6c757d;
+
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
         }
-        .total-harga {
-            font-weight: bold;
-            color: #198754;
-        }
-        .empty-msg {
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #f8fafc; }
+
+        .total-harga { font-weight: 700; font-size: .95rem; }
+        .fasilitas   { font-size: .82rem; line-height: 1.7; }
+        .harga-dasar { color: #64748b; font-size: .82rem; }
+
+        footer {
             text-align: center;
-            color: #6c757d;
-            font-style: italic;
-            padding: 20px;
+            color: #94a3b8;
+            font-size: .8rem;
+            padding-bottom: 20px;
         }
     </style>
 </head>
 <body>
 
-    <h1>Daftar Pemesanan Tiket Bioskop</h1>
+<header>
+    <h1>🎦 Sistem Manajemen Tiket Bioskop</h1>
+    <p>Praktikum Pemrograman Berorientasi Objek (PBO) – PHP OOP</p>
+</header>
 
-    <!-- Tabel Studio Regular -->
-    <h2>Studio Regular</h2>
-    <?php if (empty($listRegular)): ?>
-        <p class="empty-msg">Belum ada data pemesanan untuk Studio Regular.</p>
-    <?php else: ?>
-        <table>
-            <tr>
-                <th>ID Tiket</th>
-                <th>Nama Film</th>
-                <th>Jadwal Tayang</th>
-                <th>Jumlah Kursi</th>
-                <th>Harga Dasar</th>
-                <th>Total Harga</th>
-                <th>Info & Fasilitas</th>
-            </tr>
-            <?php foreach ($listRegular as $tiket): ?>
-            <tr>
-                <td><?= htmlspecialchars($tiket->getIdTiket()) ?></td>
-                <td><?= htmlspecialchars($tiket->getNamaFilm()) ?></td>
-                <td><?= htmlspecialchars($tiket->getJadwalTayang()) ?></td>
-                <td><?= htmlspecialchars($tiket->getJumlahKursi()) ?></td>
-                <td>Rp <?= number_format($tiket->getHargaDasarTiket(), 0, ',', '.') ?></td>
-                <td class="total-harga">Rp <?= number_format($tiket->hitungTotalHarga(), 0, ',', '.') ?></td>
-                <td class="fasilitas"><?= htmlspecialchars($tiket->tampilkanInfoFasilitas()) ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
+<main>
 
-    <!-- Tabel Studio IMAX -->
-    <h2>Studio IMAX</h2>
-    <?php if (empty($listIMAX)): ?>
-        <p class="empty-msg">Belum ada data pemesanan untuk Studio IMAX.</p>
-    <?php else: ?>
-        <table>
-            <tr>
-                <th>ID Tiket</th>
-                <th>Nama Film</th>
-                <th>Jadwal Tayang</th>
-                <th>Jumlah Kursi</th>
-                <th>Harga Dasar</th>
-                <th>Total Harga</th>
-                <th>Info & Fasilitas</th>
-            </tr>
-            <?php foreach ($listIMAX as $tiket): ?>
-            <tr>
-                <td><?= htmlspecialchars($tiket->getIdTiket()) ?></td>
-                <td><?= htmlspecialchars($tiket->getNamaFilm()) ?></td>
-                <td><?= htmlspecialchars($tiket->getJadwalTayang()) ?></td>
-                <td><?= htmlspecialchars($tiket->getJumlahKursi()) ?></td>
-                <td>Rp <?= number_format($tiket->getHargaDasarTiket(), 0, ',', '.') ?></td>
-                <td class="total-harga">Rp <?= number_format($tiket->hitungTotalHarga(), 0, ',', '.') ?></td>
-                <td class="fasilitas"><?= htmlspecialchars($tiket->tampilkanInfoFasilitas()) ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-    <?php endif; ?>
+<?php foreach ($studioConfig as $jenis => $cfg): ?>
+<?php $tikets = $tiketPerStudio[$jenis]; ?>
 
-    <!-- Tabel Studio VELVET -->
-    <h2>Studio VELVET</h2>
-    <?php if (empty($listVelvet)): ?>
-        <p class="empty-msg">Belum ada data pemesanan untuk Studio VELVET.</p>
-    <?php else: ?>
+<section class="studio-section">
+
+    <!-- Header Studio -->
+    <div class="studio-header" style="background:<?= $cfg['warna'] ?>;">
+        <span style="font-size:1.5rem"><?= $cfg['emoji'] ?></span>
+        <h2>Studio <?= $jenis ?></h2>
+        <span class="badge"><?= count($tikets) ?> Tiket</span>
+    </div>
+
+    <!-- Tabel Data -->
+    <div class="tbl-wrap">
         <table>
-            <tr>
-                <th>ID Tiket</th>
-                <th>Nama Film</th>
-                <th>Jadwal Tayang</th>
-                <th>Jumlah Kursi</th>
-                <th>Harga Dasar</th>
-                <th>Total Harga</th>
-                <th>Info & Fasilitas</th>
-            </tr>
-            <?php foreach ($listVelvet as $tiket): ?>
-            <tr>
-                <td><?= htmlspecialchars($tiket->getIdTiket()) ?></td>
-                <td><?= htmlspecialchars($tiket->getNamaFilm()) ?></td>
-                <td><?= htmlspecialchars($tiket->getJadwalTayang()) ?></td>
-                <td><?= htmlspecialchars($tiket->getJumlahKursi()) ?></td>
-                <td>Rp <?= number_format($tiket->getHargaDasarTiket(), 0, ',', '.') ?></td>
-                <td class="total-harga">Rp <?= number_format($tiket->hitungTotalHarga(), 0, ',', '.') ?></td>
-                <td class="fasilitas"><?= htmlspecialchars($tiket->tampilkanInfoFasilitas()) ?></td>
-            </tr>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nama Film</th>
+                    <th>Jadwal Tayang</th>
+                    <th>Kursi</th>
+                    <th>Harga Dasar/Kursi</th>
+                    <th>Fasilitas Studio</th>
+                    <th>Total Harga</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php if (empty($tikets)): ?>
+                <tr>
+                    <td colspan="7" style="text-align:center;color:#94a3b8;padding:24px;">
+                        Tidak ada data tiket.
+                    </td>
+                </tr>
+            <?php else: ?>
+            <?php foreach ($tikets as $tiket): ?>
+                <tr>
+                    <td><?= $tiket->getIdTiket() ?></td>
+                    <td><strong><?= htmlspecialchars($tiket->getNamaFilm()) ?></strong></td>
+                    <td><?= date('d M Y, H:i', strtotime($tiket->getJadwalTayang())) ?></td>
+                    <td style="text-align:center"><?= $tiket->getJumlahKursi() ?></td>
+                    <td class="harga-dasar"><?= rupiah($tiket->getHargaDasarTiket()) ?></td>
+
+                    <!-- Polymorphism: tampilkanInfoFasilitas() -->
+                    <td class="fasilitas"><?= $tiket->tampilkanInfoFasilitas() ?></td>
+
+                    <!-- Polymorphism: hitungTotalHarga() -->
+                    <td class="total-harga" style="color:<?= $cfg['warna'] ?>">
+                        <?= rupiah($tiket->hitungTotalHarga()) ?>
+                    </td>
+                </tr>
             <?php endforeach; ?>
+            <?php endif; ?>
+            </tbody>
         </table>
-    <?php endif; ?>
+    </div>
+
+</section>
+
+<?php endforeach; ?>
+
+</main>
+
+<footer>
+    <p>Simulasi UAS Praktikum PBO &bull; Sistem Tiket Bioskop &bull; PHP OOP</p>
+</footer>
 
 </body>
 </html>
